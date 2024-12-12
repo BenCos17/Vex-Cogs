@@ -23,6 +23,8 @@ SERVICE_LITERAL = Literal[  # we love DRY
     "fastly",  # deprecated
     "wikimedia",
     "twitch",
+    "openai",
+
 ]
 
 
