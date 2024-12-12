@@ -24,7 +24,6 @@ SERVICE_LITERAL = Literal[  # we love DRY
     "wikimedia",
     "twitch",
     "openai",
-
 ]
 
 
