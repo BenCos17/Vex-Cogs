@@ -112,7 +112,7 @@ FEEDS = {
     },
     "twitch": {
         "url": "https://status.openai.com/",
-        "id": "hgdjsds40s",
+        "id": "eft43zesg35s",
         "friendly": "OpenAI",
     },
 }
