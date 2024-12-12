@@ -109,6 +109,11 @@ FEEDS = {
         "id": "yfj40zdsk34s",
         "friendly": "Twitch",
     },
+    "twitch": {
+        "url": "https://status.openai.com/",
+        "id": "yfj40zdsk34s",
+        "friendly": "OpenAI",
+    },
 }
 
 SPECIAL_INFO = {
