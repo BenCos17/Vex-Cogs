@@ -130,18 +130,14 @@ class AnotherPingCog(commands.Cog):
             embed = discord.Embed(title=title)
             # Add shard latencies
             if len(shard_latencies) > 1:
-                shard_lines = [
-                    f"{self._get_shard_latency_text(round(latency * 1000), settings)} "
-                    f"S{shard_id}: {round(latency * 1000)}ms"
-                    for shard_id, latency in sorted(shard_latencies.items())
-                ]
-                shard_text = " | ".join(shard_lines)
-                avg_latency = round(sum(shard_latencies.values()) * 1000 / len(shard_latencies))
-                embed.add_field(
-                    name="Discord WS", 
-                    value=box(f"{shard_text}\nMax: {ws_latency}ms | Avg: {avg_latency}ms", "py"), 
-                    inline=False
-                )
+                for shard_id, latency in sorted(shard_latencies.items()):
+                    shard_ms = round(latency * 1000)
+                    emoji = self._get_shard_latency_text(shard_ms, settings)
+                    embed.add_field(
+                        name=f"Shard {shard_id}",
+                        value=box(f"{emoji} {shard_ms}ms", "py"),
+                        inline=True
+                    )
             else:
                 embed.add_field(name="Discord WS", value=box(f"{ws_latency} ms", "py"))
             if settings.footer == "default":
@@ -168,22 +164,17 @@ class AnotherPingCog(commands.Cog):
 
         if use_embed and embed is not None:
             colour = self._get_emb_colour(ws_latency, m_latency, settings)
-            # Update shard latencies in embed
+            # Update or add shard latencies in embed
             if len(shard_latencies) > 1:
-                shard_lines = [
-                    f"{self._get_shard_latency_text(round(latency * 1000), settings)} "
-                    f"S{shard_id}: {round(latency * 1000)}ms"
-                    for shard_id, latency in sorted(shard_latencies.items())
-                ]
-                shard_text = " | ".join(shard_lines)
-                avg_latency = round(sum(shard_latencies.values()) * 1000 / len(shard_latencies))
-                extra = box(f"{shard_text}\nMax: {ws_latency}ms | Avg: {avg_latency}ms", "py")
-                embed.set_field_at(0, name="Discord WS", value=extra)
+                # Remove the initially added shard fields (if any) and re-add with updated info
+                # Since we already added them, just add the message send field
+                extra = box(f"{m_latency} ms", "py")
+                embed.add_field(name="Message Send", value=f"{m_latency_text}{extra}", inline=False)
             else:
                 extra = box(f"{ws_latency} ms", "py")
                 embed.set_field_at(0, name="Discord WS", value=f"{ws_latency_text}{extra}")
-            extra = box(f"{m_latency} ms", "py")
-            embed.add_field(name="Message Send", value=f"{m_latency_text}{extra}")
+                extra = box(f"{m_latency} ms", "py")
+                embed.add_field(name="Message Send", value=f"{m_latency_text}{extra}")
             embed.colour = colour
             await message.edit(
                 content=(
@@ -204,10 +195,9 @@ class AnotherPingCog(commands.Cog):
                     for shard_id, latency in sorted(shard_latencies.items())
                 ]
                 shard_info = " | ".join(shard_lines)
-                avg_latency = round(sum(shard_latencies.values()) * 1000 / len(shard_latencies))
                 data = [
                     ["Discord WS", "Message Send"],
-                    [f"{shard_info}\nMax: {ws_latency}ms | Avg: {avg_latency}ms", m_latency_text],
+                    [shard_info, m_latency_text],
                     ["", f"{m_latency} ms"],
                 ]
             else:
