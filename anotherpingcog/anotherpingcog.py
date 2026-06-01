@@ -93,7 +93,13 @@ class AnotherPingCog(commands.Cog):
         The embed has more detail and is preferred.
         """
         try:
-            ws_latency = round(self.bot.latency * 1000)
+            # Get latencies for all shards
+            shard_latencies = dict(self.bot.latencies)
+            if not shard_latencies:
+                ws_latency = round(self.bot.latency * 1000)
+                shard_latencies = {0: self.bot.latency}
+            else:
+                ws_latency = round(max(shard_latencies.values()) * 1000)
         except OverflowError:  # ping float is infinity, ie last ping to discord failed
             await ctx.send(
                 "I'm alive and working normally, but I've had connection issues in the last few "
@@ -122,7 +128,15 @@ class AnotherPingCog(commands.Cog):
 
         if use_embed:
             embed = discord.Embed(title=title)
-            embed.add_field(name="Discord WS", value=box(f"{ws_latency} ms", "py"))
+            # Add shard latencies
+            if len(shard_latencies) > 1:
+                shard_text = "\n".join(
+                    f"Shard {shard_id}: {round(latency * 1000)} ms"
+                    for shard_id, latency in sorted(shard_latencies.items())
+                )
+                embed.add_field(name="Discord WS (Shards)", value=box(shard_text, "py"), inline=False)
+            else:
+                embed.add_field(name="Discord WS", value=box(f"{ws_latency} ms", "py"))
             if settings.footer == "default":
                 embed.set_footer(text=DEFAULT_FOOTER)
             elif settings.footer != "none":
@@ -147,8 +161,17 @@ class AnotherPingCog(commands.Cog):
 
         if use_embed and embed is not None:
             colour = self._get_emb_colour(ws_latency, m_latency, settings)
-            extra = box(f"{ws_latency} ms", "py")
-            embed.set_field_at(0, name="Discord WS", value=f"{ws_latency_text}{extra}")
+            # Update shard latencies in embed
+            if len(shard_latencies) > 1:
+                shard_text = "\n".join(
+                    f"{self._get_shard_latency_text(round(latency * 1000), settings)} Shard {shard_id}: {round(latency * 1000)} ms"
+                    for shard_id, latency in sorted(shard_latencies.items())
+                )
+                extra = box(shard_text, "py")
+                embed.set_field_at(0, name="Discord WS (Shards)", value=f"{extra}")
+            else:
+                extra = box(f"{ws_latency} ms", "py")
+                embed.set_field_at(0, name="Discord WS", value=f"{ws_latency_text}{extra}")
             extra = box(f"{m_latency} ms", "py")
             embed.add_field(name="Message Send", value=f"{m_latency_text}{extra}")
             embed.colour = colour
@@ -165,11 +188,22 @@ class AnotherPingCog(commands.Cog):
             )
 
         else:
-            data = [
-                ["Discord WS", "Message Send"],
-                [ws_latency_text, m_latency_text],
-                [f"{ws_latency} ms", f"{m_latency} ms"],
-            ]
+            if len(shard_latencies) > 1:
+                shard_info = "\n".join(
+                    f"Shard {shard_id}: {round(latency * 1000)} ms"
+                    for shard_id, latency in sorted(shard_latencies.items())
+                )
+                data = [
+                    ["Discord WS (Shards)", "Message Send"],
+                    [shard_info, m_latency_text],
+                    [f"(max: {ws_latency} ms)", f"{m_latency} ms"],
+                ]
+            else:
+                data = [
+                    ["Discord WS", "Message Send"],
+                    [ws_latency_text, m_latency_text],
+                    [f"{ws_latency} ms", f"{m_latency} ms"],
+                ]
             table = box(tabulate.tabulate(data, tablefmt="plain"), "py")  # cspell: disable-line
             msg = f"**{title}**{table}"
             await message.edit(content=msg)
@@ -210,6 +244,19 @@ class AnotherPingCog(commands.Cog):
             m_latency_text = f"{settings.red.emoji} Very Bad" if emojis else "Very Bad"
 
         return ws_latency_text, m_latency_text
+
+    def _get_shard_latency_text(self, ws_latency: int, settings: Cache) -> str:
+        """Get the status emoji for a specific shard latency."""
+        if ws_latency < 50:
+            return f"{settings.green.emoji}"
+        elif ws_latency < 150:
+            return f"{settings.green.emoji}"
+        elif ws_latency < 250:
+            return f"{settings.orange.emoji}"
+        elif ws_latency < 500:
+            return f"{settings.red.emoji}"
+        else:
+            return f"{settings.red.emoji}"
 
     @commands.group()
     @commands.is_owner()
