@@ -17,7 +17,7 @@ from stattrack.commands import StatTrackCommands
 from stattrack.driver import StatTrackSQLiteDriver
 from stattrack.plot import StatPlot
 
-from .vexutils import format_help, format_info, get_vex_logger
+from .vexutils import format_help, format_info, get_vex_logger, kaleido_setup
 from .vexutils.chat import humanize_bytes
 from .vexutils.loop import VexLoop
 
@@ -37,7 +37,7 @@ class StatTrack(commands.Cog, StatTrackCommands, StatPlot, metaclass=CompositeMe
     Data can also be exported with `[p]stattrack export` into a few different formats.
     """
 
-    __version__ = "1.10.0"
+    __version__ = "1.10.4"
     __author__ = "@vexingvexed"
 
     def __init__(self, bot: Red) -> None:
@@ -54,6 +54,8 @@ class StatTrack(commands.Cog, StatTrackCommands, StatPlot, metaclass=CompositeMe
         self.last_loop_raw: Optional[float] = None
 
         self.last_plot_debug = None
+
+        self.plot_backend_ready = False
 
         self.driver = StatTrackSQLiteDriver()
 
@@ -80,6 +82,8 @@ class StatTrack(commands.Cog, StatTrackCommands, StatPlot, metaclass=CompositeMe
             pass
 
     async def cog_load(self) -> None:
+        self.bot.loop.create_task(self.kaleido_check())
+
         if await self.config.version() < 2:
             log.info("Migrating StatTrack config from 1 to 2.")
             df_conf = await self.config.main_df()
@@ -95,6 +99,9 @@ class StatTrack(commands.Cog, StatTrackCommands, StatPlot, metaclass=CompositeMe
 
         self.loop = self.bot.loop.create_task(self.stattrack_loop())
         self.loop_meta = VexLoop("StatTrack loop", 60.0)
+
+    async def kaleido_check(self) -> None:
+        self.plot_backend_ready = await kaleido_setup()
 
     async def migrate_v1_to_v2(self, data: dict) -> None:
         # a big dataset can take 1 second to write as JSON, so better make it not blocking
@@ -119,6 +126,7 @@ class StatTrack(commands.Cog, StatTrackCommands, StatPlot, metaclass=CompositeMe
                 loops=[self.loop_meta] if self.loop_meta else [],
                 extras={
                     "Loop time": f"{self.last_loop_time}",
+                    "Plot backend ready": str(self.plot_backend_ready),
                 },
             )
             + f"\nDisk usage (SQLite database): {humanize_bytes(self.driver.storage_usage())}"

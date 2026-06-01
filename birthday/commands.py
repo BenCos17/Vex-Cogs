@@ -15,6 +15,7 @@ from redbot.core.utils.predicates import ReactionPredicate
 from rich.table import Table  # type:ignore
 
 from .abc import MixinMeta
+from .components.paged_embed import PaginatedEmbedView
 from .components.setup import SetupView
 from .consts import MAX_BDAY_MSG_LEN, MIN_BDAY_YEAR
 from .converters import BirthdayConverter, TimeConverter
@@ -35,7 +36,8 @@ class BirthdayCommands(MixinMeta):
         if not await self.check_if_setup(ctx.guild):
             await ctx.send(
                 "This command is not available until the cog has been setup. "
-                f"Get an admin to use `{ctx.clean_prefix}bdset interactive` to get started."
+                f"Get an admin to use `{ctx.clean_prefix}bdset interactive` to get started "
+                f"or check what's missing with `{ctx.clean_prefix}birthdayinfo`."
             )
             raise CheckFailure("cog needs setup")
 
@@ -194,16 +196,30 @@ class BirthdayCommands(MixinMeta):
 
         sorted_parsed_bdays = sorted(parsed_bdays.items(), key=lambda x: x[0])
 
-        embed = discord.Embed(title="Upcoming Birthdays", colour=await ctx.embed_colour())
+        MAX_PER_PAGE = 25
 
-        if len(sorted_parsed_bdays) > 25:
-            embed.description = "Too many days to display. I've had to stop at 25."
-            sorted_parsed_bdays = sorted_parsed_bdays[:25]
+        if len(sorted_parsed_bdays) < MAX_PER_PAGE:
+            embed = discord.Embed(title="Upcoming Birthdays", colour=await ctx.embed_colour())
+            for day, members in sorted_parsed_bdays:
+                embed.add_field(name=number_day_mapping.get(day), value="\n".join(members))
+            await ctx.send(embed=embed)
+        else:
+            pages = len(sorted_parsed_bdays) // MAX_PER_PAGE + (
+                1 if len(sorted_parsed_bdays) % MAX_PER_PAGE > 0 else 0
+            )
+            embeds = []
+            for i in range(pages):
+                embed = discord.Embed(
+                    title="Upcoming Birthdays",
+                    description=f"Page {i + 1}/{pages}",
+                    colour=await ctx.embed_colour(),
+                )
+                for day, members in sorted_parsed_bdays[i * MAX_PER_PAGE : (i + 1) * MAX_PER_PAGE]:
+                    embed.add_field(name=number_day_mapping.get(day), value="\n".join(members))
+                embeds.append(embed)
 
-        for day, members in sorted_parsed_bdays:
-            embed.add_field(name=number_day_mapping.get(day), value="\n".join(members))
-
-        await ctx.send(embed=embed)
+            view = PaginatedEmbedView(embeds, ctx.author.id)
+            await ctx.send(embed=embeds[0], view=view)
 
 
 class BirthdayAdminCommands(MixinMeta):
@@ -215,7 +231,9 @@ class BirthdayAdminCommands(MixinMeta):
 
     @birthdaydebug.command(name="upcoming")
     async def debug_upcoming(self, ctx: commands.Context):
-        await ctx.send_interactive(pagify(str(await self.config.all_members(ctx.guild))), "py")
+        await ctx.send_interactive(
+            pagify(str(await self.config.all_members(ctx.guild)), shorten_by=12), "py"
+        )
 
     @commands.group()
     @commands.guild_only()  # type:ignore
@@ -227,7 +245,7 @@ class BirthdayAdminCommands(MixinMeta):
         Looking to set your own birthday? Use `[p]birthday set` or `[p]bday set`.
         """
 
-    @commands.bot_has_permissions(manage_roles=True)
+    @commands.bot_has_guild_permissions(manage_roles=True)
     @bdset.command()
     async def interactive(self, ctx: commands.Context):
         """Start interactive setup"""
@@ -257,7 +275,7 @@ class BirthdayAdminCommands(MixinMeta):
             table.add_row("Role", role.name if role else "Role deleted")
 
             if conf["time_utc_s"] is None:
-                time = "invalid"
+                time = "Invalid. You must set this before getting notifications."
             else:
                 time = datetime.datetime.utcfromtimestamp(conf["time_utc_s"]).strftime("%H:%M UTC")
                 table.add_row("Time", time)
@@ -277,8 +295,14 @@ class BirthdayAdminCommands(MixinMeta):
                     "Not set. All users can set their birthday and have it announced.",
                 )
 
-            message_w_year = conf["message_w_year"] or "No message set"
-            message_wo_year = conf["message_wo_year"] or "No message set"
+            message_w_year = (
+                conf["message_w_year"]
+                or "No message set. You must set this before getting notifications."
+            )
+            message_wo_year = (
+                conf["message_wo_year"]
+                or "No message set. You must set this before getting notifications."
+            )
 
         warnings = "\n"
         if (error := role is None) or (error := role_perm_check(ctx.me, role)):
@@ -628,8 +652,13 @@ class BirthdayAdminCommands(MixinMeta):
             for day, users in guild_data.items():
                 for user_id, year in users.items():
                     dt = datetime.datetime.fromordinal(int(day))
+                    year = year
+                    if year is None:
+                        year = 1
+                    else:
+                        year = int(year)
 
-                    if year is None or year < MIN_BDAY_YEAR:
+                    if year < MIN_BDAY_YEAR:
                         year = 1
 
                     try:
@@ -642,7 +671,9 @@ class BirthdayAdminCommands(MixinMeta):
                         "month": dt.month,
                         "day": dt.day,
                     }
-                    await self.config.member_from_ids(guild_id, user_id).birthday.set(new_data)
+                    await self.config.member_from_ids(int(guild_id), int(user_id)).birthday.set(
+                        new_data
+                    )
 
         await ctx.send(
             "All set. You can now configure the messages and time to send with other commands"

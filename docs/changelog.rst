@@ -18,6 +18,7 @@ Jump links:
 | :ref:`beautify<cl_beautify>`
 | :ref:`betteruptime<cl_betteruptime>`
 | :ref:`birthday<cl_birthday>`
+| :ref:`calc<cl_calc>`
 | :ref:`cmdlog<cl_cmdlog>`
 | :ref:`fivemstatus<cl_fivemstatus>`
 | :ref:`github<cl_github>`
@@ -242,6 +243,14 @@ BetterUptime
 ============
 
 *********
+``2.1.5``
+*********
+
+2025-08-03
+
+- Fix to support breaking changed in Kaleido 1.0.0 for plotting graphs
+
+*********
 ``2.1.4``
 *********
 
@@ -419,6 +428,38 @@ Birthday
 ========
 
 *********
+``1.4.1``
+*********
+
+2026-02-12
+
+- Correctly check for manage roles permission at guild level instead of channel level during setup
+
+*********
+``1.4.0``
+*********
+
+2025-08-16
+
+- Improve error messages and information when the cog is partially setup
+
+*********
+``1.3.1``
+*********
+
+2025-08-15
+
+- Pagify embeds in `[p]birthday upcoming` for when there are more than 25 entries
+
+*********
+``1.2.3``
+*********
+
+2025-01-29
+
+- Fix ``bdset zemigrate``
+
+*********
 ``1.2.2``
 *********
 
@@ -448,7 +489,7 @@ Birthday
 
 2022-05-20
 
-- Show correct age a user will turn in `birthday upcoming` when their next birthday is next year
+- Show correct age a user will turn in ``birthday upcoming`` when their next birthday is next year
 
 *********
 ``1.1.0``
@@ -564,11 +605,55 @@ Birthday
 - Initial release
 
 
+.. _cl_calc:
+
+====
+Calc
+====
+
+*********
+``0.1.0``
+*********
+
+2025-09-18
+
+- Add support for auto-detecting and evalauting calculations sent as a chat
+- Get started with the ``calcset`` command
+- Thanks Evanroby (GH #152)
+
+*********
+``0.0.4``
+*********
+
+2025-06-16
+
+- Correctly support inputs typed for the calc command (GH #145)
+- Support multipliers k, m, b, t, and scientific notation (GH #145)
+- Thanks Evanroby
+
+
 .. _cl_buttonpoll:
 
 ==========
 ButtonPoll
 ==========
+
+*********
+``1.2.2``
+*********
+
+2025-08-15
+
+- Fix an edge case where a completed poll's message was deleted and the poll set to edit, and logs
+were spammed with attempts to edit the message without removing from config
+
+*********
+``1.2.1``
+*********
+
+2025-08-03
+
+- Fix to support breaking changed in Kaleido 1.0.0 for plotting graphs
 
 *********
 ``1.2.0``
@@ -911,6 +996,14 @@ GoogleTrends
 ============
 
 *********
+``1.1.1``
+*********
+
+2025-08-03
+
+- Fix to support breaking changed in Kaleido 1.0.0 for plotting graphs
+
+*********
 ``1.1.0``
 *********
 
@@ -1001,6 +1094,38 @@ RolePlay
 =========
 StatTrack
 =========
+
+**********
+``1.10.4``
+**********
+
+2025-08-05
+
+- Improve Kaleido error handling and messages
+
+**********
+``1.10.3``
+**********
+
+2025-08-03
+
+- Move Kaleido setup code to common utils
+
+**********
+``1.10.2``
+**********
+
+2025-08-03
+
+- Improve Kaleido first setup code for installation of backend rendering engine
+
+**********
+``1.10.1``
+**********
+
+2025-08-03
+
+- Fix to support breaking changed in Kaleido 1.0.0 for plotting graphs
 
 **********
 ``1.10.0``
